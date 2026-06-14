@@ -908,6 +908,64 @@ def is_entry_3po7ru(klines: List[KLine], full_code: str = "") -> Tuple[bool, str
     return (True, f"3破{break_day}入{days_since_zt}")
 
 
+def is_special_3po7ru_case1(klines: List[KLine]) -> Tuple[bool, str]:
+    """
+    特殊情况1: 涨停次日破最低价的同时，收盘又站上开盘价，红K。
+    有分歧，难把握——但做标记给有经验者。
+    """
+    if len(klines) < 10:
+        return (False, "")
+
+    c = len(klines) - 1
+    today = klines[c]
+
+    zt_idx = -1
+    for i in range(c - 1, 0, -1):
+        prev_close = klines[i-1].close
+        if prev_close > 0 and klines[i].close >= prev_close * 1.095 and klines[i].close == klines[i].high:
+            if klines[i].open == klines[i].close == klines[i].high:
+                continue
+            zt_idx = i
+            break
+    if zt_idx == -1 or c - zt_idx != 1:
+        return (False, "")
+
+    zt = klines[zt_idx]
+    if (today.low < zt.low
+            and today.close > today.open
+            and today.close > zt.open):
+        return (True, "次日破价红K收(分歧)")
+    return (False, "")
+
+
+def is_special_3po7ru_case2(klines: List[KLine]) -> Tuple[bool, str]:
+    """
+    特殊情况2: 涨停次日阴包阳，有分歧，难把握。
+    相对高位换庄手法，要警惕。
+    """
+    if len(klines) < 10:
+        return (False, "")
+
+    c = len(klines) - 1
+    today = klines[c]
+
+    zt_idx = -1
+    for i in range(c - 1, 0, -1):
+        prev_close = klines[i-1].close
+        if prev_close > 0 and klines[i].close >= prev_close * 1.095 and klines[i].close == klines[i].high:
+            if klines[i].open == klines[i].close == klines[i].high:
+                continue
+            zt_idx = i
+            break
+    if zt_idx == -1 or c - zt_idx != 1:
+        return (False, "")
+
+    zt = klines[zt_idx]
+    if today.close < zt.open and today.high > zt.high:
+        return (True, "次日阴包阳(换庄/分歧)")
+    return (False, "")
+
+
 # ==================== 缠论技术分析（基于108课原文）====================
 
 def is_bottom_divergence(klines: List[KLine], macd_hist: List[float], lookback=30) -> bool:
@@ -1445,6 +1503,19 @@ def scan_stock(code: str, full_code: str, klines: List[KLine]) -> Optional[Dict]
     if entry_3p7r and chg <= 3.0:
         hit["三破七入"] = True
 
+    # === 策略0d: 三破七入特殊情况（分歧模式）===
+    sp1, sp1_desc = is_special_3po7ru_case1(klines)
+    sp2, sp2_desc = is_special_3po7ru_case2(klines)
+
+    # === 盘口数字暗语检测 ===
+    price_code_signals = ""
+    try:
+        from price_code_language import scan_stock_price_code
+        pcs = scan_stock_price_code(name, code, klines)
+        price_code_signals = pcs["summary"]
+    except Exception:
+        pass
+
     # === 策略1: 低位放量首板(优先级4) ===
     # 课程笔记: 首板突破20日平台 = 涨停突破确认
     if (3.0 <= chg <= 8.0
@@ -1643,6 +1714,8 @@ def scan_stock(code: str, full_code: str, klines: List[KLine]) -> Optional[Dict]
         "低吸买点": pullback_desc,
         "九爆发": second_bo_desc if second_bo else "",
         "三破七入": entry_3p7r_desc if entry_3p7r else "",
+        "三破七入特例": sp1_desc if sp1 else (sp2_desc if sp2 else ""),
+        "盘口暗语": price_code_signals,
         # 缠论信号
         "缠论买点": chan_buy_desc,
         "背驰": div_desc,
@@ -1808,6 +1881,16 @@ def get_daily_report(results: List[Dict], index_info: Dict = None) -> str:
         e7 = r.get("三破七入", "")
         if e7 and not sbo:
             tags.append("3破7入")
+        # 三破七入特殊情况标记
+        sp = r.get("三破七入特例", "")
+        if "分歧" in sp:
+            tags.append("分歧")
+        elif "换庄" in sp:
+            tags.append("换庄")
+        # 盘口暗语标记
+        pcs = r.get("盘口暗语", "")
+        if pcs:
+            tags.append("盘语")
         sl = r.get("策略列表", [])
         if "低位放量首板" in sl and "低吸买点" not in sl:
             tags.append("首板")
@@ -1979,6 +2062,17 @@ def get_daily_report(results: List[Dict], index_info: Dict = None) -> str:
             lines.append(f"  {tag(r):<16} {r['代码']:<8} {r['名称']:<10} {r['涨跌幅']:<8} {r['量比']:<6} {desc:<40}")
         lines.append("")
 
+    # ===== 盘口数字暗语 =====
+    pc_stocks = [r for r in sorted_results if r.get("盘口暗语", "")]
+    if pc_stocks:
+        lines.append("【盘口暗语】神奇数字盘口语言 — 主力意图数字信号")
+        lines.append(f"  {'标记':<16} {'代码':<8} {'名称':<10} {'涨幅%':<8} {'盘口暗语'}")
+        lines.append(f"  {'-'*16} {'-'*8} {'-'*10} {'-'*8} {'-'*40}")
+        for r in pc_stocks[:6]:
+            pcs = r.get("盘口暗语", "")
+            lines.append(f"  {tag(r):<16} {r['代码']:<8} {r['名称']:<10} {r['涨跌幅']:<8} {pcs:<40}")
+        lines.append("")
+
     # ===== 新增：洗盘结束+回踩买点 + 倍量突破 =====
     washout_stocks = [r for r in sorted_results if r.get("洗盘结束", "") or r.get("倍量突破", "")]
     if washout_stocks:
@@ -2096,6 +2190,8 @@ def get_daily_report(results: List[Dict], index_info: Dict = None) -> str:
     lines.append("  低吸买点: 前期放量拉升 → 缩量回调(量<70%) → 今日企稳(小阳/下影线) → 不破MA20（回调低吸，不追高）")
     lines.append("  三破七入九爆发: 首板涨停(非一字/T板,不≥3连板) + 60均上+开在60均上 + 破板绿量递减 + 距高点>20%空间 + 公式选:三破(第1天破→涨停后新高)/七入(第2天破→新高)/九爆发(第3天破→新高) — 二次爆发用")
     lines.append("  三破七入上车: 3天内破涨停最低 + 7天内红K放量站上ZTO且<ZTC + 60均上 + 距高点>20%空间 — 调整期低吸用")
+    lines.append("  三破七入特例: ①次日破价红K收(分歧) ②次日阴包阳(换庄) — PDF升级版规则")
+    lines.append("  盘口暗语: 股价盘口数字暗号(1111/8888/ABAB/逃顶密码) — 主力意图识别")
     lines.append("  缠论精选: 一买/二买/三买 + 底背驰（缠师108课核心）")
     lines.append("  低位放量首板: 涨幅>3% + 量比>1.8 + 均线多头 + 突破20日平台")
     lines.append("  连板接力: 近期有涨停 + 今日上涨 + 均线多头 + MACD多头")

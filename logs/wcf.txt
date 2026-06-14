@@ -1,0 +1,2 @@
+[2026-06-14 15:22:56.317] [debug] [WCF] [log.hpp::69::Log::InitLogger] InitLogger with debug level
+[2026-06-14 15:22:56.318] [error] [WCF] [spy.cpp::27::Spy::Init] WCF 支持版本: 3.9.12.51，当前版本: 3.9.12.57

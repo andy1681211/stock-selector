@@ -630,6 +630,16 @@ def _run_api_mode():
     print(f"  [报告] {report_path.name}")
 
 
+def _try_enable_fallback():
+    """尝试启用网页数据降级（通达信读不到时自动切到网页）"""
+    try:
+        from web_data_fallback import patch_tdx_reader
+        patch_tdx_reader()
+        return True
+    except Exception:
+        return False
+
+
 def main():
     import argparse
 
@@ -650,6 +660,7 @@ def main():
     parser.add_argument("--api", action="store_true", help="使用API选股（在线补充）")
     parser.add_argument("--learn", action="store_true", help="运行信号跟踪流水线（记录+评估+回测+优化）")
     parser.add_argument("--report-learn", action="store_true", help="查看信号跟踪学习报告")
+    parser.add_argument("--review", action="store_true", help="运行复盘分析（5步法:大盘→板块→个股→信号→策略）")
     parser.add_argument("--mode", choices=["local", "limit-up", "combined"],
                         default="local", help="选股模式 (默认: local)")
     parser.add_argument("--monitor", action="store_true", help="盘中实时监控 (仅limit-up模式)")
@@ -666,10 +677,18 @@ def main():
         print("\n" + report + "\n")
         return
 
+    if args.review:
+        from review_analysis import generate_review
+        generate_review()
+        return
+
     if args.api:
         args.mode = "api"
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 启用网页数据降级（通达信数据不足时自动切到akshare/Playwright）
+    _try_enable_fallback()
 
     print()
     print("=" * 60)

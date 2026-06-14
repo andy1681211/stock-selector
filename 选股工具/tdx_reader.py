@@ -294,6 +294,66 @@ def check_n_shape_reversal(klines: List[KLine]) -> bool:
     return today_chg > 2
 
 
+def get_realtime_prices(codes: List[str]) -> Dict[str, Dict]:
+    """
+    通过 pytdx 获取实时行情。
+
+    Args:
+        codes: 股票代码列表
+
+    Returns:
+        {code: {"price": float, "pct_chg": float, "volume": float, "amount": float}}
+    """
+    result = {}
+    try:
+        from pytdx.hq import TDX_HQ_API
+
+        api = TDX_HQ_API()
+        api.connect('119.147.212.81', 7709)
+
+        # 分批查询（每批最多50只）
+        batch_size = 50
+        for i in range(0, len(codes), batch_size):
+            batch = codes[i:i + batch_size]
+            # 转换代码格式
+            quotes = []
+            for code in batch:
+                code = code.strip()
+                if code.startswith(("6", "9", "5")):
+                    market = 1
+                elif code.startswith(("0", "3", "2")):
+                    market = 0
+                elif code.startswith(("4", "8")):
+                    market = 4
+                else:
+                    continue
+                quotes.append((market, code))
+
+            if not quotes:
+                continue
+
+            try:
+                data = api.get_security_quotes(quotes)
+                if data:
+                    for item in data:
+                        code = str(item.get("code", ""))
+                        result[code] = {
+                            "price": item.get("price", 0),
+                            "pct_chg": item.get("buy", [0])[1] / 100 if item.get("buy") else 0,
+                            "volume": item.get("zongVol", 0),
+                            "amount": item.get("amount", 0),
+                        }
+            except Exception:
+                continue
+
+        api.disconnect()
+
+    except Exception:
+        pass
+
+    return result
+
+
 def check_price_near_low(klines: List[KLine], days: int = 20) -> bool:
     """股价在N日低位（低位放量用）"""
     if len(klines) < days:
