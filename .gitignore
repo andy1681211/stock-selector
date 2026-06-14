@@ -1,0 +1,66 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# 选股输出（结果文件，每次运行生成）
+选股工具/output/
+
+# 数据库文件
+*.db
+*.db-shm
+*.db-wal
+
+# Memos 本地实例
+Memos/memos.exe
+Memos/old/
+Memos/data/
+
+# 系统配置
+.claude/
+.gstack/
+
+# 环境变量/密钥
+*.env
+.env.local
+settings.local.json
+
+# Token 文件
+*jwt_token*
+*token*.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node
+node_modules/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Git
+.git/
+
+# PDF 书籍/讲义
+*.pdf
+chanlun*.txt
+缠中说禅*.txt
+
+# 日志文件
+*.log
+injector.log
+
+# 调试/临时脚本
+选股工具/debug_*.py
+选股工具/analyze_*.py
+选股工具/extract_doc*.py
+选股工具/_fix_*.py
+选股工具/rank_best.py
+选股工具/check_*.py
