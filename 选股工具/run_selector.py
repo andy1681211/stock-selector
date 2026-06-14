@@ -661,6 +661,8 @@ def main():
     parser.add_argument("--learn", action="store_true", help="运行信号跟踪流水线（记录+评估+回测+优化）")
     parser.add_argument("--report-learn", action="store_true", help="查看信号跟踪学习报告")
     parser.add_argument("--review", action="store_true", help="运行复盘分析（5步法:大盘→板块→个股→信号→策略）")
+    parser.add_argument("--debate", action="store_true", help="多智能体辩论模式（分析师→多空辩论→交易员→风控→PM决策）")
+    parser.add_argument("--debate-top", type=int, default=5, help="辩论前N只股票")
     parser.add_argument("--mode", choices=["local", "limit-up", "combined"],
                         default="local", help="选股模式 (默认: local)")
     parser.add_argument("--monitor", action="store_true", help="盘中实时监控 (仅limit-up模式)")
@@ -680,6 +682,38 @@ def main():
     if args.review:
         from review_analysis import generate_review
         generate_review()
+        return
+
+    if args.debate:
+        from debate_engine import debate_top_stocks, format_debate_report
+        # 先跑本地选股获取数据
+        _try_enable_fallback()
+        from local_screener import run_local_screen
+        print("[模式] 多智能体辩论分析（TradingAgents架构）")
+        print(f"       辩论前 {args.debate_top} 只高置信股票")
+        print()
+        results = run_local_screen()
+        # 检测市场状态
+        regime_info = None
+        try:
+            from local_screener import parse_day_file, TDX_ROOT
+            from market_regime import detect_market_regime
+            import os
+            idx_path = os.path.join(TDX_ROOT, "sh", "lday", "sh000001.day")
+            idx_klines = parse_day_file(idx_path, 500)
+            if len(idx_klines) >= 60:
+                regime_info = detect_market_regime(idx_klines)
+        except Exception:
+            pass
+        decisions = debate_top_stocks(results, regime_info, top_n=args.debate_top)
+        report = format_debate_report(decisions)
+        print("\n" + report)
+        # 保存
+        from datetime import datetime as _dt
+        ts = _dt.now().strftime('%Y%m%d_%H%M%S')
+        report_path = OUTPUT_DIR / f"辩论报告_{ts}.txt"
+        report_path.write_text(report, encoding="utf-8")
+        print(f"\n[OK] 报告已保存: {report_path}")
         return
 
     if args.api:
