@@ -262,7 +262,7 @@ def _run_local_mode():
             print(f"  [止损预警] {len(stop_alerts)}只!")
             for s in stop_alerts[:5]:
                 e = s["stop_engine"]
-                print(f"    [止损] {s["name"]}({s["code"]}) {e["当前利润"]:+.1f}% 止损{e["止损价"]}")
+                print(f"    [止损] {s['name']}({s['code']}) {e['当前利润']:+.1f}% 止损{e['止损价']}")
     except Exception as e:
         print(f"  [止盈止损] 跳过: {e}")
 

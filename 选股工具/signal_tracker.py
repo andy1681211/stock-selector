@@ -213,7 +213,7 @@ def evaluate_previous_picks(lookback_days: int = 5) -> Dict:
     updated = 0
     errors = 0
     hit_counts = defaultdict(lambda: {"up": 0, "down": 0, "total": 0})
-    hit_by_threshold = defaultdict(lambda: defaultdict(lambda: {"up": 0, "down": 0}))
+    hit_by_threshold = defaultdict(lambda: {"total": 0, "up": 0, "down": 0})
 
     for i, evt in enumerate(events):
         # 只处理未评估的，且在 lookback_days 天内的事件
