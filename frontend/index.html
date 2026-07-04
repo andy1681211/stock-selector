@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海哥智能选股器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📈 海哥智能选股器</h1>
+            <p class="subtitle">每日精选 · 技术分析 · 缠论辅助</p>
+        </header>
+
+        <!-- 搜索区域 -->
+        <section class="search-section">
+            <div class="search-box">
+                <input type="text" id="stockInput" placeholder="输入股票代码（如：000006）" maxlength="6">
+                <button id="analyzeBtn" onclick="analyzeStock()">开始分析</button>
+            </div>
+            <div id="loading" class="loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>正在分析中...</p>
+            </div>
+        </section>
+
+        <!-- 分析结果 -->
+        <section id="resultSection" class="result-section" style="display:none;">
+            <div class="result-card">
+                <h2 id="stockName">股票名称</h2>
+                <p class="stock-code" id="stockCode">000006</p>
+                
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <span class="metric-label">MACD</span>
+                        <span class="metric-value" id="macdValue">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">KDJ</span>
+                        <span class="metric-value" id="kdjValue">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">缠论</span>
+                        <span class="metric-value" id="chanlunValue">-</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">综合评分</span>
+                        <span class="metric-value highlight" id="scoreValue">-</span>
+                    </div>
+                </div>
+
+                <div class="recommendation" id="recommendation">
+                    <p>建议：<span id="recommendText">-</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 每日精选 -->
+        <section class="daily-section">
+            <h2>📋 今日精选候选股</h2>
+            <div class="stock-list" id="dailyList">
+                <!-- 动态加载 -->
+            </div>
+        </section>
+
+        <!-- 板块轮动 -->
+        <section class="sector-section">
+            <h2>🔥 热门板块</h2>
+            <div class="sector-tags" id="sectorTags">
+                <!-- 动态加载 -->
+            </div>
+        </section>
+
+        <footer>
+            <p>⚠️ 本工具仅供学习研究，不构成投资建议</p>
+            <p class="copyright">© 2026 海哥智能选股器</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

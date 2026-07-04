@@ -1,0 +1,100 @@
+# -*- coding: utf-8 -*-
+import sys
+import os
+import json
+from datetime import datetime
+
+# 添加 scripts 目录到路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
+
+from flask import Flask, jsonify, request, send_from_directory
+
+app = Flask(__name__, static_folder='.')
+
+WORKSPACE = os.path.dirname(__file__)
+SCRIPTS_DIR = os.path.join(WORKSPACE, '..', 'scripts')
+
+# 股票名称缓存
+_STOCK_NAMES = None
+
+def get_stock_names():
+    """从通达信 profile.dat 解析股票名称"""
+    global _STOCK_NAMES
+    if _STOCK_NAMES is not None:
+        return _STOCK_NAMES
+    
+    _STOCK_NAMES = {}
+    profile_path = r'D:\new_tdx\T0002\hq_cache\profile.dat'
+    if not os.path.exists(profile_path):
+        return _STOCK_NAMES
+    
+    try:
+        with open(profile_path, 'rb') as f:
+            data = f.read()
+        import re
+        # 匹配: 6位数字 + \x00 + 名称(GBK字节, 2-15字节, 不含\x00) + \x00
+        pattern = rb'(\d{6})\x00([\x80-\xff\x20-\x7f]{2,15})\x00'
+        matches = re.findall(pattern, data)
+        for code_bytes, name_bytes in matches:
+            code = code_bytes.decode('ascii')
+            name = name_bytes.decode('gbk', errors='ignore').strip()
+            if name and code not in _STOCK_NAMES:
+                _STOCK_NAMES[code] = name
+    except Exception:
+        pass
+    return _STOCK_NAMES
+
+def get_stock_name(code):
+    """获取股票名称"""
+    names = get_stock_names()
+    return names.get(code, '未知')
+
+def analyze_stock(code):
+    """分析单只股票的技术面"""
+    try:
+        from tdx_analyzer import analyze_stock as tdx_analyze
+        # 判断沪市(sh)还是深市(sz)
+        if code.startswith(('6', '9')):
+            prefix = 'sh'
+        else:
+            prefix = 'sz'
+        tdx_path = rf'D:\new_tdx\vipdoc\{prefix}\lday\{prefix}{code}.day'
+        if not os.path.exists(tdx_path):
+            return {'error': f'未找到 {code} 的日线数据: {tdx_path}'}
+        result = tdx_analyze(tdx_path, '测试', code)
+        # 覆盖名称字段
+        result['stock'] = {'code': code, 'name': get_stock_name(code)}
+        return result
+    except Exception as e:
+        return {'error': str(e)}
+
+@app.route('/api/health')
+def health():
+    return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
+
+@app.route('/api/analyze')
+def api_analyze():
+    code = request.args.get('code', '')
+    if not code:
+        return jsonify({'error': '请提供股票代码'}), 400
+    result = analyze_stock(code)
+    return jsonify(result)
+
+@app.route('/api/daily')
+def api_daily():
+    """返回每日精选"""
+    today = datetime.now().strftime('%Y-%m-%d')
+    test_file = os.path.join(WORKSPACE, 'data', f'daily_{today}.json')
+    
+    if os.path.exists(test_file):
+        with open(test_file, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    
+    return jsonify({'message': '暂无每日精选数据'})
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=3000, debug=False)
