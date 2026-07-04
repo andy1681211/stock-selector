@@ -4,10 +4,6 @@
     {
       "src": "api/route.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "dist/*",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -17,10 +13,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/$1"
+      "dest": "/$1"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
