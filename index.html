@@ -58,6 +58,7 @@
         <div class="nav">
             <div class="nav-item active" onclick="showTab('analyze')">个股分析</div>
             <div class="nav-item" onclick="showTab('daily')">每日精选</div>
+            <div class="nav-item" onclick="showTab('status')">连接状态</div>
         </div>
 
         <!-- 个股分析 -->
@@ -75,6 +76,12 @@
             <h2 style="margin-bottom: 20px;">⭐ 每日精选</h2>
             <div id="daily-result"></div>
         </div>
+
+        <!-- 连接状态 -->
+        <div id="status-tab" class="card hidden">
+            <h2 style="margin-bottom: 20px;">🔗 连接状态</h2>
+            <div id="status-result"></div>
+        </div>
     </div>
 
     <footer>
@@ -84,7 +91,11 @@
     </footer>
 
     <script>
-        const API_BASE = window.location.origin;
+        // 优先使用本地Flask API，如果没有则使用Vercel后端
+        const LOCAL_API = 'http://127.0.0.1:3000';
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? window.location.origin 
+            : LOCAL_API;
         
         function showTab(tab) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -93,10 +104,14 @@
             if (tab === 'analyze') {
                 document.getElementById('analyze-tab').classList.remove('hidden');
                 document.querySelectorAll('.nav-item')[0].classList.add('active');
-            } else {
+            } else if (tab === 'daily') {
                 document.getElementById('daily-tab').classList.remove('hidden');
                 document.querySelectorAll('.nav-item')[1].classList.add('active');
                 loadDaily();
+            } else if (tab === 'status') {
+                document.getElementById('status-tab').classList.remove('hidden');
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+                checkStatus();
             }
         }
 
@@ -242,6 +257,34 @@
             } catch (error) {
                 resultDiv.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`;
             }
+        }
+
+        async function checkStatus() {
+            const resultDiv = document.getElementById('status-result');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>检查连接...</p></div>';
+            
+            let html = '<div class="result">';
+            
+            // 检查本地Flask API
+            try {
+                const resp = await fetch(`${LOCAL_API}/api/health`, {signal: AbortSignal.timeout(5000)});
+                if (resp.ok) {
+                    html += '<div style="padding:10px;background:#d4edda;border-radius:8px;margin-bottom:10px;">✅ <strong>本地Flask API</strong> 连接正常 (http://127.0.0.1:3000)</div>';
+                } else {
+                    html += '<div style="padding:10px;background:#f8d7da;border-radius:8px;margin-bottom:10px;">❌ 本地Flask API 返回错误</div>';
+                }
+            } catch (e) {
+                html += '<div style="padding:10px;background:#fff3cd;border-radius:8px;margin-bottom:10px;">⚠️ <strong>本地Flask API 未连接</strong><br>请确保本地Flask服务正在运行: <code>python server.py</code></div>';
+            }
+            
+            // 检查当前页面来源
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            html += `<div style="padding:10px;background:#e3f2fd;border-radius:8px;margin-bottom:10px;">📡 当前页面来源: <strong>${window.location.href}</strong></div>`;
+            
+            html += '<div style="padding:10px;background:#f8f9fa;border-radius:8px;font-size:0.9em;">💡 <strong>使用方法:</strong><br>1. 确保本地Flask服务运行 (端口3000)<br>2. 局域网设备可通过 <code>http://192.168.2.23:3000</code> 访问<br>3. Vercel部署版本会自动请求本地Flask API</div>';
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
         }
 
         // Enter键触发分析
