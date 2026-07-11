@@ -3,294 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>海哥选股器 - 智能选股工具</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
-        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
-        header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 0; text-align: center; margin-bottom: 30px; }
-        h1 { font-size: 2em; margin-bottom: 10px; }
-        .subtitle { opacity: 0.9; font-size: 1.1em; }
-        .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px 16px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; transition: border-color 0.3s; }
-        input:focus { outline: none; border-color: #667eea; }
-        button { padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; }
-        button:hover { background: #5568d3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .result { margin-top: 20px; }
-        .stock-item { padding: 15px; border-left: 4px solid #667eea; margin-bottom: 15px; background: #f8f9fa; border-radius: 0 8px 8px 0; }
-        .stock-code { font-weight: bold; font-size: 1.2em; color: #667eea; }
-        .stock-name { color: #666; margin-left: 10px; }
-        .score { float: right; padding: 5px 12px; border-radius: 20px; font-weight: bold; }
-        .score-high { background: #d4edda; color: #155724; }
-        .score-medium { background: #fff3cd; color: #856404; }
-        .score-low { background: #f8d7da; color: #721c24; }
-        .tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
-        .tag { padding: 4px 10px; border-radius: 15px; font-size: 0.85em; }
-        .tag-macd { background: #e3f2fd; color: #1976d2; }
-        .tag-chanlun { background: #f3e5f5; color: #7b1fa2; }
-        .tag-rsi { background: #e8f5e9; color: #388e3c; }
-        .loading { text-align: center; padding: 40px; color: #666; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px; }
-        footer { text-align: center; padding: 30px 0; color: #666; font-size: 0.9em; }
-        .nav { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
-        .nav-item { padding: 10px 20px; background: white; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-        .nav-item.active { background: #667eea; color: white; }
-        .hidden { display: none; }
-        @media (max-width: 600px) {
-            .input-group { flex-direction: column; }
-            h1 { font-size: 1.5em; }
-        }
-    </style>
+    <title>海哥智能选股器</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>📈 海哥选股器</h1>
-            <p class="subtitle">智能选股工具 · 技术面分析 · 每日精选</p>
-        </div>
-    </header>
-
     <div class="container">
-        <div class="nav">
-            <div class="nav-item active" onclick="showTab('analyze')">个股分析</div>
-            <div class="nav-item" onclick="showTab('daily')">每日精选</div>
-            <div class="nav-item" onclick="showTab('status')">连接状态</div>
-        </div>
-
-        <!-- 个股分析 -->
-        <div id="analyze-tab" class="card">
-            <h2 style="margin-bottom: 20px;">🔍 个股技术分析</h2>
-            <div class="input-group">
-                <input type="text" id="stock-code" placeholder="请输入股票代码 (如: 000006)" maxlength="6">
-                <button onclick="analyzeStock()" id="analyze-btn">开始分析</button>
-            </div>
-            <div id="analyze-result"></div>
-        </div>
+        <header>
+            <h1>📈 海哥智能选股器</h1>
+            <p class="subtitle">每日精选 · 四维分析 · 技术分析</p>
+            <p class="update-time" id="updateTime">加载中...</p>
+        </header>
 
         <!-- 每日精选 -->
-        <div id="daily-tab" class="card hidden">
-            <h2 style="margin-bottom: 20px;">⭐ 每日精选</h2>
-            <div id="daily-result"></div>
-        </div>
+        <section class="daily-section">
+            <h2>📋 今日精选候选股</h2>
+            <div class="stock-list" id="dailyList">
+                <p style="text-align:center;color:#666;">加载中...</p>
+            </div>
+        </section>
 
-        <!-- 连接状态 -->
-        <div id="status-tab" class="card hidden">
-            <h2 style="margin-bottom: 20px;">🔗 连接状态</h2>
-            <div id="status-result"></div>
-        </div>
+        <!-- 板块资金流向 -->
+        <section class="sector-section">
+            <h2>🔥 热门板块资金</h2>
+            <div class="sector-tags" id="sectorTags">
+                <p style="text-align:center;color:#666;">加载中...</p>
+            </div>
+        </section>
+
+        <!-- 个股分析 -->
+        <section class="search-section">
+            <h2>🔍 个股技术分析</h2>
+            <div class="search-box">
+                <input type="text" id="stockInput" placeholder="输入股票代码（如：000006）" maxlength="6">
+                <button id="analyzeBtn" onclick="analyzeStock()">分析</button>
+            </div>
+            <div id="loading" class="loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>正在分析中...</p>
+            </div>
+            <div id="resultSection" class="result-section" style="display:none;">
+                <div class="result-card" id="resultCard"></div>
+            </div>
+        </section>
+
+        <footer>
+            <p>⚠️ 本工具仅供学习研究，不构成投资建议</p>
+            <p class="copyright">© 2026 海哥智能选股器</p>
+        </footer>
     </div>
 
-    <footer>
-        <div class="container">
-            <p>© 2026 海哥选股器 · 仅供学习研究使用 · 投资有风险，入市需谨慎</p>
-        </div>
-    </footer>
-
-    <script>
-        // 优先使用本地Flask API，如果没有则使用Vercel后端
-        const LOCAL_API = 'http://127.0.0.1:3000';
-        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? window.location.origin 
-            : LOCAL_API;
-        
-        function showTab(tab) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('[id$="-tab"]').forEach(el => el.classList.add('hidden'));
-            
-            if (tab === 'analyze') {
-                document.getElementById('analyze-tab').classList.remove('hidden');
-                document.querySelectorAll('.nav-item')[0].classList.add('active');
-            } else if (tab === 'daily') {
-                document.getElementById('daily-tab').classList.remove('hidden');
-                document.querySelectorAll('.nav-item')[1].classList.add('active');
-                loadDaily();
-            } else if (tab === 'status') {
-                document.getElementById('status-tab').classList.remove('hidden');
-                document.querySelectorAll('.nav-item')[2].classList.add('active');
-                checkStatus();
-            }
-        }
-
-        async function analyzeStock() {
-            const code = document.getElementById('stock-code').value.trim();
-            if (!code || code.length !== 6) {
-                alert('请输入6位股票代码');
-                return;
-            }
-
-            const btn = document.getElementById('analyze-btn');
-            const resultDiv = document.getElementById('analyze-result');
-            
-            btn.disabled = true;
-            btn.textContent = '分析中...';
-            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在分析...</p></div>';
-
-            try {
-                const response = await fetch(`${API_BASE}/api/analyze?code=${code}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    resultDiv.innerHTML = `<div class="error">❌ ${data.error}</div>`;
-                } else {
-                    resultDiv.innerHTML = renderAnalysis(data);
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '开始分析';
-            }
-        }
-
-        function renderAnalysis(data) {
-            let html = '<div class="result">';
-            
-            // 股票基本信息
-            const stock = data.stock || {};
-            html += `<div class="stock-item">
-                <span class="stock-code">${stock.code || 'N/A'}</span>
-                <span class="stock-name">${stock.name || 'N/A'}</span>
-            </div>`;
-            
-            // 最新行情
-            if (data.latest) {
-                const l = data.latest;
-                html += `<div style="margin:10px 0;padding:10px;background:#f0f4ff;border-radius:8px;font-size:0.9em;">
-                    <strong>最新行情 (${l.date}):</strong> 收盘 ${l.close} | 涨跌 ${l.change_pct}% | 成交量 ${(l.volume_gu/1e8).toFixed(2)}亿股 | 成交额 ${(l.amount_yi).toFixed(2)}亿
-                </div>`;
-            }
-            
-            // 均线
-            if (data.technical) {
-                const t = data.technical;
-                html += `<div class="tags">
-                    <span class="tag tag-macd">MA5: ${t.ma5?.toFixed(2)}</span>
-                    <span class="tag tag-macd">MA10: ${t.ma10?.toFixed(2)}</span>
-                    <span class="tag tag-macd">MA20: ${t.ma20?.toFixed(2)}</span>
-                    <span class="tag tag-macd">MA60: ${t.ma60?.toFixed(2)}</span>
-                </div>`;
-            }
-            
-            // MACD
-            if (data.technical) {
-                const t = data.technical;
-                html += `<div class="tags" style="margin-top:5px;">
-                    <span class="tag tag-macd">DIF: ${t.macd_dif?.toFixed(2)}</span>
-                    <span class="tag tag-macd">DEA: ${t.macd_dea?.toFixed(2)}</span>
-                    <span class="tag tag-macd">MACD柱: ${t.macd_hist?.toFixed(2)}</span>
-                </div>`;
-            }
-            
-            // RSI
-            if (data.technical) {
-                html += `<div class="tags" style="margin-top:5px;">
-                    <span class="tag tag-rsi">RSI(14): ${data.technical.rsi_14?.toFixed(2)}</span>
-                </div>`;
-            }
-            
-            // 布林带
-            if (data.key_levels) {
-                const k = data.key_levels;
-                html += `<div class="tags" style="margin-top:5px;">
-                    <span class="tag tag-macd">布林上轨: ${k.boll_upper?.toFixed(2)}</span>
-                    <span class="tag tag-macd">布林中轨: ${k.boll_mid?.toFixed(2)}</span>
-                    <span class="tag tag-macd">布林下轨: ${k.boll_lower?.toFixed(2)}</span>
-                </div>`;
-            }
-            
-            // 信号列表
-            if (data.signals && data.signals.length > 0) {
-                html += '<div style="margin-top:15px;"><strong>技术信号:</strong><ul style="margin-top:5px;padding-left:20px;">';
-                data.signals.forEach(s => {
-                    const color = s.signal.includes('多头') || s.signal.includes('买') ? '#155724' : s.signal.includes('空头') || s.signal.includes('卖') ? '#721c24' : '#856404';
-                    html += `<li style="margin:4px 0;color:${color};">[${s.indicator}] ${s.signal}: ${s.detail}</li>`;
-                });
-                html += '</ul></div>';
-            }
-            
-            // 缠论
-            if (data.chanlun) {
-                const c = data.chanlun;
-                html += `<div style="margin-top:10px;padding:8px;background:#f8f0ff;border-radius:6px;font-size:0.9em;color:#7b1fa2;">
-                    <strong>缠论:</strong> ${c.detail}${c.buy_point ? ' | 买点: ' + c.buy_point : ''}
-                </div>`;
-            }
-            
-            // 综合判断
-            if (data.verdict) {
-                const verdictColor = data.verdict.includes('偏多') ? '#155724' : data.verdict.includes('偏空') ? '#721c24' : '#856404';
-                html += `<div style="margin-top:15px;padding:12px;background:${verdictColor === '#155724' ? '#d4edda' : verdictColor === '#721c24' ? '#f8d7da' : '#fff3cd'};border-radius:8px;text-align:center;font-size:1.1em;font-weight:bold;color:${verdictColor};">
-                    综合判断: ${data.verdict}
-                </div>`;
-            }
-            
-            html += '</div>';
-            return html;
-        }
-
-        async function loadDaily() {
-            const resultDiv = document.getElementById('daily-result');
-            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
-            
-            try {
-                const response = await fetch(`${API_BASE}/api/daily`);
-                const data = await response.json();
-                
-                if (data.stocks && data.stocks.length > 0) {
-                    let html = '';
-                    data.stocks.forEach(stock => {
-                        const scoreClass = stock.score >= 7 ? 'score-high' : stock.score >= 4 ? 'score-medium' : 'score-low';
-                        html += `<div class="stock-item">
-                            <span class="stock-code">${stock.code}</span>
-                            <span class="stock-name">${stock.name}</span>
-                            <span class="score ${scoreClass}">${stock.score}</span>
-                        </div>`;
-                    });
-                    resultDiv.innerHTML = html;
-                } else {
-                    resultDiv.innerHTML = '<p style="text-align: center; color: #666;">暂无数据</p>';
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="error">❌ 加载失败: ${error.message}</div>`;
-            }
-        }
-
-        async function checkStatus() {
-            const resultDiv = document.getElementById('status-result');
-            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>检查连接...</p></div>';
-            
-            let html = '<div class="result">';
-            
-            // 检查本地Flask API
-            try {
-                const resp = await fetch(`${LOCAL_API}/api/health`, {signal: AbortSignal.timeout(5000)});
-                if (resp.ok) {
-                    html += '<div style="padding:10px;background:#d4edda;border-radius:8px;margin-bottom:10px;">✅ <strong>本地Flask API</strong> 连接正常 (http://127.0.0.1:3000)</div>';
-                } else {
-                    html += '<div style="padding:10px;background:#f8d7da;border-radius:8px;margin-bottom:10px;">❌ 本地Flask API 返回错误</div>';
-                }
-            } catch (e) {
-                html += '<div style="padding:10px;background:#fff3cd;border-radius:8px;margin-bottom:10px;">⚠️ <strong>本地Flask API 未连接</strong><br>请确保本地Flask服务正在运行: <code>python server.py</code></div>';
-            }
-            
-            // 检查当前页面来源
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            html += `<div style="padding:10px;background:#e3f2fd;border-radius:8px;margin-bottom:10px;">📡 当前页面来源: <strong>${window.location.href}</strong></div>`;
-            
-            html += '<div style="padding:10px;background:#f8f9fa;border-radius:8px;font-size:0.9em;">💡 <strong>使用方法:</strong><br>1. 确保本地Flask服务运行 (端口3000)<br>2. 局域网设备可通过 <code>http://192.168.2.23:3000</code> 访问<br>3. Vercel部署版本会自动请求本地Flask API</div>';
-            
-            html += '</div>';
-            resultDiv.innerHTML = html;
-        }
-
-        // Enter键触发分析
-        document.getElementById('stock-code').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') analyzeStock();
-        });
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>

@@ -8,8 +8,31 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'scripts'))
 
 from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+
+# 导入选股记忆系统
+try:
+    from stock_memory import get_accuracy_stats, get_daily_summary
+except ImportError:
+    def get_accuracy_stats(): return {"total_tracked": 0}
+    def get_daily_summary(*args, **kwargs): return {"count": 0, "recommendations": []}
+
+# 导入资金流向模块
+try:
+    from fund_flow import get_sector_fund_flow, get_concept_sector_ranking
+except ImportError:
+    def get_sector_fund_flow(*args, **kwargs): return []
+    def get_concept_sector_ranking(*args, **kwargs): return []
+
+# 导入自动推送模块
+try:
+    from auto_push import push_daily_picks, push_stock_analysis
+except ImportError:
+    def push_daily_picks(*args, **kwargs): return None
+    def push_stock_analysis(*args, **kwargs): return None
 
 app = Flask(__name__, static_folder='.')
+CORS(app)  # 允许所有来源跨域访问
 
 WORKSPACE = os.path.dirname(__file__)
 SCRIPTS_DIR = os.path.join(WORKSPACE, '..', 'scripts')
@@ -72,6 +95,33 @@ def analyze_stock(code):
 def health():
     return jsonify({'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
+@app.route('/api/memory/stats')
+def memory_stats():
+    """选股记忆统计"""
+    return jsonify(get_accuracy_stats())
+
+@app.route('/api/memory/daily/<date_str>')
+def memory_daily(date_str):
+    """某天的选股记录"""
+    return jsonify(get_daily_summary(date_str))
+
+@app.route('/api/memory/daily/latest')
+def memory_daily_latest():
+    """最新一天的选股记录"""
+    return jsonify(get_daily_summary())
+
+@app.route('/api/fund-flow/sectors')
+def fund_flow_sectors():
+    """板块资金流向"""
+    sectors = get_sector_fund_flow(page=1, size=20)
+    return jsonify({"sectors": sectors, "timestamp": datetime.now().isoformat()})
+
+@app.route('/api/fund-flow/concepts')
+def fund_flow_concepts():
+    """概念板块资金流向"""
+    concepts = get_concept_sector_ranking(top_n=10)
+    return jsonify({"concepts": concepts, "timestamp": datetime.now().isoformat()})
+
 @app.route('/api/analyze')
 def api_analyze():
     code = request.args.get('code', '')
@@ -84,11 +134,37 @@ def api_analyze():
 def api_daily():
     """返回每日精选"""
     today = datetime.now().strftime('%Y-%m-%d')
+    # 尝试今天的文件
     test_file = os.path.join(WORKSPACE, 'data', f'daily_{today}.json')
+    if not os.path.exists(test_file):
+        # 尝试 workspace/data/ 下的 daily_pick_*.json
+        workspace_data = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', f'daily_pick_{today}.json')
+        if os.path.exists(workspace_data):
+            test_file = workspace_data
+    # 如果今天没有，找最近一次的
+    if not os.path.exists(test_file):
+        workspace_data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+        pick_files = [f for f in os.listdir(workspace_data_dir) if f.startswith('daily_pick_') and f.endswith('.json')]
+        # 提取日期部分排序（daily_pick_YYYY-MM-DD.json 或 daily_pick_v3_YYYY-MM-DD.json）
+        import re
+        def extract_date(fname):
+            m = re.search(r'(\d{4}-\d{2}-\d{2})', fname)
+            return m.group(1) if m else '0000-00-00'
+        pick_files.sort(key=extract_date, reverse=True)
+        if pick_files:
+            test_file = os.path.join(workspace_data_dir, pick_files[0])
     
     if os.path.exists(test_file):
         with open(test_file, 'r', encoding='utf-8') as f:
-            return jsonify(json.load(f))
+            data = json.load(f)
+        
+        # 自动推送到微信
+        push_file = push_daily_picks(data)
+        if push_file:
+            data['push_sent'] = True
+            data['push_file'] = push_file
+        
+        return jsonify(data)
     
     return jsonify({'message': '暂无每日精选数据'})
 
