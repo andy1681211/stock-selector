@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海哥智能选股器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📈 海哥智能选股器</h1>
+            <p class="subtitle">每日精选 · 四维分析 · 技术分析</p>
+            <p class="update-time" id="updateTime">加载中...</p>
+        </header>
+
+        <!-- 每日精选 -->
+        <section class="daily-section">
+            <h2>📋 今日精选候选股</h2>
+            <div class="stock-list" id="dailyList">
+                <p style="text-align:center;color:#666;">加载中...</p>
+            </div>
+        </section>
+
+        <!-- 板块资金流向 -->
+        <section class="sector-section">
+            <h2>🔥 热门板块资金</h2>
+            <div class="sector-tags" id="sectorTags">
+                <p style="text-align:center;color:#666;">加载中...</p>
+            </div>
+        </section>
+
+        <!-- 个股分析 -->
+        <section class="search-section">
+            <h2>🔍 个股技术分析</h2>
+            <div class="search-box">
+                <input type="text" id="stockInput" placeholder="输入股票代码（如：000006）" maxlength="6">
+                <button id="analyzeBtn" onclick="analyzeStock()">分析</button>
+            </div>
+            <div id="loading" class="loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>正在分析中...</p>
+            </div>
+            <div id="resultSection" class="result-section" style="display:none;">
+                <div class="result-card" id="resultCard"></div>
+            </div>
+        </section>
+
+        <footer>
+            <p>⚠️ 本工具仅供学习研究，不构成投资建议</p>
+            <p class="copyright">© 2026 海哥智能选股器</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
