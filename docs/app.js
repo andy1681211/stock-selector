@@ -1,14 +1,14 @@
 // ========== 配置 ==========
-// 从本地JSON文件加载数据（开发时）或从GitHub加载（部署后）
 const CONFIG = {
-    // 本地开发模式：直接读文件
-    // GitHub Pages模式：从仓库raw链接加载
-    useGitHub: false,  // 部署时改为 true
     githubUser: 'andy1681211',
     githubRepo: 'stock-selector',
     branch: 'main',
-    dataDir: '../data'  // 相对路径，指向 workspace/data/
+    docsFolder: 'docs'
 };
+
+function rawUrl(path) {
+    return `https://raw.githubusercontent.com/${CONFIG.githubUser}/${CONFIG.githubRepo}/${CONFIG.branch}/${path}`;
+}
 
 // ========== 加载每日精选 ==========
 async function loadDailyPicks() {
@@ -16,33 +16,21 @@ async function loadDailyPicks() {
     const timeEl = document.getElementById('updateTime');
     
     try {
-        let data = null;
-        
-        // 尝试从本地JSON文件加载
-        const latestFile = await findLatestFile(CONFIG.dataDir, 'daily_pick_');
-        if (latestFile) {
-            data = await loadJSON(latestFile);
+        const url = rawUrl(`${CONFIG.docsFolder}/data/latest_pick.json`);
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            throw new Error('数据文件不存在');
         }
-        
-        // 如果本地没有，尝试从GitHub加载
-        if (!data) {
-            data = await loadFromGitHub('data/daily_pick_');
-        }
-        
-        if (!data) {
-            listEl.innerHTML = '<p style="text-align:center;color:#999;">暂无数据，请先运行选股脚本</p>';
-            timeEl.textContent = '';
-            return;
-        }
+        const data = await resp.json();
         
         // 更新时间
-        const pickDate = extractDateFromFile(latestFile || '');
-        timeEl.textContent = `更新时间：${pickDate || '未知'}`;
+        if (data.date) {
+            timeEl.textContent = `更新时间：${data.date}`;
+        }
         
-        // 渲染股票列表
-        const picks = data.recommendations || data.picks || [];
+        const picks = data.recommendations || [];
         if (picks.length === 0) {
-            listEl.innerHTML = '<p style="text-align:center;color:#999;">今日无推荐，市场处于观望期</p>';
+            listEl.innerHTML = '<p style="text-align:center;color:#ccc;">今日无推荐，市场处于观望期</p>';
             return;
         }
         
@@ -66,13 +54,12 @@ async function loadDailyPicks() {
         });
         
         listEl.innerHTML = html;
-        
-        // 缓存 picks 数据供详情查看
         window._picks = picks;
         
     } catch (err) {
         console.error('加载选股数据失败:', err);
-        listEl.innerHTML = '<p style="text-align:center;color:#f44;">数据加载失败</p>';
+        listEl.innerHTML = '<p style="text-align:center;color:#f44;">暂无数据，请先运行选股脚本</p>';
+        timeEl.textContent = '';
     }
 }
 
@@ -81,17 +68,16 @@ async function loadSectors() {
     const el = document.getElementById('sectorTags');
     
     try {
-        // 尝试从本地 sector 数据加载
-        const data = await loadFromGitHub('data/sector_top.txt');
-        if (data) {
-            renderSectors(data);
+        const url = rawUrl(`${CONFIG.docsFolder}/data/sectors.txt`);
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            el.innerHTML = '<p style="text-align:center;color:#ccc;">板块数据暂未生成</p>';
             return;
         }
-        
-        // 如果没有板块数据，显示提示
-        el.innerHTML = '<p style="text-align:center;color:#999;">板块数据暂未生成</p>';
+        const text = await resp.text();
+        renderSectors(text);
     } catch (err) {
-        el.innerHTML = '';
+        el.innerHTML = '<p style="text-align:center;color:#ccc;">板块数据暂未生成</p>';
     }
 }
 
@@ -106,7 +92,7 @@ function renderSectors(text) {
             html += `<span class="sector-tag">${sector}</span>`;
         }
     });
-    el.innerHTML = html || '<p style="text-align:center;color:#999;">暂无板块数据</p>';
+    el.innerHTML = html || '<p style="text-align:center;color:#ccc;">暂无板块数据</p>';
 }
 
 // ========== 个股技术分析 ==========
@@ -121,33 +107,57 @@ async function analyzeStock() {
     document.getElementById('resultSection').style.display = 'none';
     
     try {
-        // 从通达信 .day 文件加载技术分析
-        const result = await analyzeFromTDX(code);
+        // 尝试从 tdx_analysis 数据文件加载
+        const dateStr = new Date().toISOString().split('T')[0];
+        const url = rawUrl(`data/tdx_analysis_${code}_${dateStr}.json`);
+        
+        let result = null;
+        try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+                result = await resp.json();
+            }
+        } catch(e) {}
+        
+        // 如果没有当天数据，尝试最近一次的分析
+        if (!result) {
+            const allFiles = [
+                rawUrl(`data/tdx_analysis_${code}_2026-07-08.json`),
+                rawUrl(`data/tdx_analysis_${code}_2026-07-01.json`),
+            ];
+            for (const u of allFiles) {
+                try {
+                    const resp = await fetch(u);
+                    if (resp.ok) {
+                        result = await resp.json();
+                        break;
+                    }
+                } catch(e) {}
+            }
+        }
         
         document.getElementById('loading').style.display = 'none';
         
-        if (result.error) {
+        if (!result) {
             document.getElementById('resultSection').style.display = 'block';
             document.getElementById('resultCard').innerHTML = `
-                <div class="result-card">
-                    <h2>${result.name || '未知'}</h2>
-                    <p class="stock-code">${code}</p>
-                    <div class="recommendation danger">
-                        <p>⚠️ ${result.error}</p>
-                    </div>
+                <h2>${code}</h2>
+                <p class="stock-code">${code}</p>
+                <div class="recommendation warning">
+                    <p>📊 暂无技术分析数据。请在本地运行选股脚本后同步数据。</p>
                 </div>
             `;
             return;
         }
         
         // 渲染分析结果
-        const macd = result.macd || {};
         const ma = result.ma || {};
+        const macd = result.macd || {};
         const rs = result.summary || '';
         
         let html = `
-            <h2>${result.name || '未知'}</h2>
-            <p class="stock-code">${code}</p>
+            <h2>${result.stock?.name || result.name || code}</h2>
+            <p class="stock-code">${result.stock?.code || code}</p>
             <div class="metrics-grid">
                 <div class="metric-item">
                     <span class="metric-label">MA5</span>
@@ -163,10 +173,10 @@ async function analyzeStock() {
                 </div>
                 <div class="metric-item">
                     <span class="metric-label">MACD</span>
-                    <span class="metric-value" style="color:${macd.dif > macd.dea ? '#4caf50' : '#f44336'}">${macd.signal || '-'}</span>
+                    <span class="metric-value">${macd.signal || '-'}</span>
                 </div>
             </div>
-            <div class="recommendation ${rs.includes('买入') ? '' : rs.includes('观望') ? 'warning' : 'danger'}">
+            <div class="recommendation ${rs.includes('买入') ? '' : rs.includes('观望') ? 'warning' : ''}">
                 <p>📊 ${rs || '分析完成'}</p>
             </div>
         `;
@@ -185,54 +195,9 @@ async function analyzeStock() {
     }
 }
 
-// 从通达信 .day 文件解析技术分析
-async function analyzeFromTDX(code) {
-    const prefix = code.startsWith('6') ? 'sh' : 'sz';
-    const tdxPath = `D:/new_tdx/vipdoc/${prefix}/lday/${prefix}${code}.day`;
-    
-    // 由于浏览器无法直接读取本地文件，这里返回模拟数据
-    // 实际使用时需要通过后端API或手动上传 .day 文件
-    return {
-        code: code,
-        name: code,  // 需要从 profile.dat 解析
-        ma: { ma5: '-', ma10: '-', ma20: '-' },
-        macd: { signal: '-' },
-        summary: '请在本地运行分析脚本后，将结果放到 data/ 目录下'
-    };
-}
-
 // ========== 工具函数 ==========
 function truncate(str, len) {
     return str.length > len ? str.substring(0, len) + '...' : str;
-}
-
-function extractDateFromFile(path) {
-    if (!path) return '';
-    const match = path.match(/(\d{4}-\d{2}-\d{2})/);
-    return match ? match[1] : '';
-}
-
-async function loadJSON(path) {
-    try {
-        const resp = await fetch(path);
-        if (!resp.ok) return null;
-        return await resp.json();
-    } catch (e) {
-        return null;
-    }
-}
-
-async function loadFromGitHub(prefix) {
-    // 尝试从 GitHub raw 加载
-    const url = `https://raw.githubusercontent.com/${CONFIG.githubUser}/${CONFIG.githubRepo}/${CONFIG.branch}/${prefix}*`;
-    // 注意：GitHub raw 不支持通配符，需要知道具体文件名
-    return null;
-}
-
-async function findLatestFile(dir, prefix) {
-    // 在本地模式下，返回最新文件路径
-    // 部署到 GitHub 后需要改为从仓库获取文件列表
-    return null;
 }
 
 function showDetail(index) {
@@ -246,7 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDailyPicks();
     loadSectors();
     
-    // 回车键触发分析
     document.getElementById('stockInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') analyzeStock();
     });
