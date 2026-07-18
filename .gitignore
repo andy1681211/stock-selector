@@ -8,3 +8,6 @@ dist/
 frontend/
 
 .vercel
+
+# 允许 docs/data/ 被跟踪
+!docs/data/

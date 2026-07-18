@@ -1,0 +1,36 @@
+{
+  "date": "2026-07-17",
+  "time": "09:01",
+  "recommendations": [
+    {
+      "code": "600036",
+      "name": "招商银行",
+      "score": 3.6,
+      "reason": ""
+    },
+    {
+      "code": "601318",
+      "name": "中国平安",
+      "score": 3.6,
+      "reason": ""
+    },
+    {
+      "code": "002156",
+      "name": "通富微电",
+      "score": 3.3,
+      "reason": ""
+    },
+    {
+      "code": "600584",
+      "name": "长电科技",
+      "score": 3.3,
+      "reason": ""
+    },
+    {
+      "code": "002371",
+      "name": "北方华创",
+      "score": 3.2,
+      "reason": ""
+    }
+  ]
+}
