@@ -1,0 +1,74 @@
+{
+  "stock": {
+    "name": "600021",
+    "code": "600021"
+  },
+  "latest": {
+    "date": "2026-07-16",
+    "open": 13.98,
+    "high": 14.18,
+    "low": 13.82,
+    "close": 13.91,
+    "volume_gu": 1308869662,
+    "volume_shou": 13088697.0,
+    "amount_yi": 0.4,
+    "change_pct": -1.28
+  },
+  "technical": {
+    "ma5": 13.81,
+    "ma10": 14.04,
+    "ma20": 15.45,
+    "ma60": 17.49,
+    "macd_dif": -1.154,
+    "macd_dea": -1.057,
+    "macd_hist": -0.194,
+    "rsi_14": 39.28,
+    "boll_upper": 19.24,
+    "boll_mid": 15.45,
+    "boll_lower": 11.66,
+    "vol_ma5": 1308106379.0,
+    "vol_ma20": 941547323.0
+  },
+  "key_levels": {
+    "support": 14.43,
+    "resistance": 16.71,
+    "boll_upper": 19.24,
+    "boll_mid": 15.45,
+    "boll_lower": 11.66,
+    "zhongshu_top": 20.63,
+    "zhongshu_bottom": 13.26
+  },
+  "signals": [
+    {
+      "indicator": "均线",
+      "signal": "空头",
+      "detail": "MA5(13.81) <= MA10(14.04)"
+    },
+    {
+      "indicator": "均线排列",
+      "signal": "空头排列",
+      "detail": "MA5 < MA10 < MA20，下降趋势"
+    },
+    {
+      "indicator": "MACD",
+      "signal": "空头",
+      "detail": "DIF(-1.154) < DEA(-1.057)"
+    },
+    {
+      "indicator": "RSI",
+      "signal": "中性",
+      "detail": "RSI(14) = 39.28, 处于正常区间"
+    },
+    {
+      "indicator": "布林带",
+      "signal": "中轨区域",
+      "detail": "收盘价(13.91)在布林中轨(15.45)附近"
+    },
+    {
+      "indicator": "成交量",
+      "signal": "正常",
+      "detail": "成交量处于正常水平"
+    }
+  ],
+  "verdict": "偏空"
+}
